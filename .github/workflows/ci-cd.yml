@@ -35,7 +35,7 @@ on:
     paths:
       - 'src/**'
       - 'kube/**'
-      - '.github/workflows/**'
+      - '.github/workflows/ci-cd.yml'
   pull_request:
     branches:
       - main
@@ -46,8 +46,7 @@ on:
       - '.github/workflows/**'
 
 env:
-  ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
-  ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+  AWS_REGION: ${{ secrets.AWS_REGION }}
   IMAGE_TAG: ${{ github.sha }}
 
 jobs:
@@ -74,6 +73,22 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
 
+      - name: Set ECR variables
+        id: ecr-vars
+        run: |
+          # Use ECR_REPOSITORY secret if set, otherwise default to 'app'
+          ECR_REPO="${{ secrets.ECR_REPOSITORY }}"
+          if [ -z "$ECR_REPO" ]; then
+            ECR_REPO="app"
+          fi
+          
+          ECR_REGISTRY="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com"
+          
+          echo "ecr-registry=$ECR_REGISTRY" >> $GITHUB_OUTPUT
+          echo "ecr-repository=$ECR_REPO" >> $GITHUB_OUTPUT
+          echo "ECR Registry: $ECR_REGISTRY"
+          echo "ECR Repository: $ECR_REPO"
+
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
@@ -89,8 +104,8 @@ jobs:
           file: ./src/Dockerfile
           push: true
           tags: |
-            ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
-            ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:latest
+            ${{ steps.ecr-vars.outputs.ecr-registry }}/${{ steps.ecr-vars.outputs.ecr-repository }}:${{ env.IMAGE_TAG }}
+            ${{ steps.ecr-vars.outputs.ecr-registry }}/${{ steps.ecr-vars.outputs.ecr-repository }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64
@@ -100,7 +115,9 @@ jobs:
       - name: Set image info
         id: image-info
         run: |
-          echo "image-uri=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}" >> $GITHUB_OUTPUT
+          IMAGE_URI="${{ steps.ecr-vars.outputs.ecr-registry }}/${{ steps.ecr-vars.outputs.ecr-repository }}:${{ env.IMAGE_TAG }}"
+          echo "image-uri=$IMAGE_URI" >> $GITHUB_OUTPUT
+          echo "Built and pushed: $IMAGE_URI"
 
   test:
     needs: build-and-push
@@ -255,8 +272,9 @@ jobs:
         run: |
           cd kube/helm
           
+          # Parse image URI to get repository and tag
           IMAGE_URI="${{ needs.build-and-push.outputs.image-uri }}"
-          IMAGE_REPO="${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}"
+          IMAGE_REPO=$(echo "$IMAGE_URI" | cut -d':' -f1)
           IMAGE_TAG="${{ env.IMAGE_TAG }}"
           
           # Verify API_KEY is available
@@ -266,7 +284,8 @@ jobs:
           fi
           
           echo "Deploying application with Helm..."
-          echo "Image: $IMAGE_REPO:$IMAGE_TAG"
+          echo "Image Repository: $IMAGE_REPO"
+          echo "Image Tag: $IMAGE_TAG"
           
           helm upgrade --install nodejs-simple-app . \
             --namespace prod \
