@@ -6,11 +6,13 @@ on:
       - main
     paths:
       - 'iac/**'
+      - '.github/workflows/**'
   push:
     branches:
       - main
     paths:
       - 'iac/**'
+      - '.github/workflows/**'
   workflow_dispatch:
     inputs:
       action:
