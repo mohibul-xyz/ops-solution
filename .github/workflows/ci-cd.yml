@@ -55,12 +55,41 @@ jobs:
     permissions:
       contents: read
       id-token: write
+    env:
+      ECR_REPOSITORY_NAME: practice-project-prod-app
     outputs:
       image-uri: ${{ steps.image-info.outputs.image-uri }}
       ecr-registry: ${{ steps.ecr-vars.outputs.ecr-registry }}
       ecr-repository: ${{ steps.ecr-vars.outputs.ecr-repository }}
     
     steps:
+      - name: Set ECR variables
+        id: ecr-vars
+        run: |
+          # Use ECR_REPOSITORY secret if set, otherwise use default
+          ECR_REPO="${{ secrets.ECR_REPOSITORY }}"
+          if [ -z "$ECR_REPO" ]; then
+            ECR_REPO="${{ env.ECR_REPOSITORY_NAME }}"
+          fi
+          
+          # Validate required secrets
+          if [ -z "${{ secrets.AWS_ACCOUNT_ID }}" ]; then
+            echo "ERROR: AWS_ACCOUNT_ID secret is not set"
+            exit 1
+          fi
+          
+          if [ -z "${{ secrets.AWS_REGION }}" ]; then
+            echo "ERROR: AWS_REGION secret is not set"
+            exit 1
+          fi
+          
+          ECR_REGISTRY="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com"
+          
+          echo "ecr-registry=$ECR_REGISTRY" >> $GITHUB_OUTPUT
+          echo "ecr-repository=$ECR_REPO" >> $GITHUB_OUTPUT
+          echo "ECR Registry: $ECR_REGISTRY"
+          echo "ECR Repository: $ECR_REPO"
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
@@ -74,23 +103,6 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
-
-      - name: Set ECR variables
-        id: ecr-vars
-        run: |
-          # Use ECR_REPOSITORY secret if set, otherwise construct from project-environment-app
-          ECR_REPO="${{ secrets.ECR_REPOSITORY }}"
-          if [ -z "$ECR_REPO" ]; then
-            # Default: practice-project-prod-app (matches Terraform naming)
-            ECR_REPO="practice-project-prod-app"
-          fi
-          
-          ECR_REGISTRY="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com"
-          
-          echo "ecr-registry=$ECR_REGISTRY" >> $GITHUB_OUTPUT
-          echo "ecr-repository=$ECR_REPO" >> $GITHUB_OUTPUT
-          echo "ECR Registry: $ECR_REGISTRY"
-          echo "ECR Repository: $ECR_REPO"
 
       - name: Login to Amazon ECR
         id: login-ecr
