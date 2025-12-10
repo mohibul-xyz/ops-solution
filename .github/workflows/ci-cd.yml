@@ -224,14 +224,13 @@ jobs:
     needs: [build-and-push, test]
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    timeout-minutes: 30
     permissions:
       contents: read
       id-token: write
     concurrency:
       group: deploy-${{ github.ref }}
       cancel-in-progress: false
-    environment:
-      name: production
 
     steps:
       - name: Checkout code
@@ -246,6 +245,7 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
+          role-duration-seconds: 3600
 
       - name: Fetch API_KEY from AWS Secrets Manager
         id: fetch-secret
