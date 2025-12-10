@@ -1,22 +1,29 @@
-# CI/CD Pipeline with AWS Secrets Manager Integration
+# CI/CD Pipeline with AWS ECR and Secrets Manager Integration
 #
 # Required GitHub Secrets:
 #   - AWS_ROLE_ARN: ARN of the IAM role for OIDC authentication
-#   - AWS_REGION: AWS region (e.g., us-east-1)
+#   - AWS_REGION: AWS region (e.g., ap-southeast-1)
+#   - AWS_ACCOUNT_ID: AWS account ID for ECR registry
 #   - SECRET_MANAGER_NAME: Name of the secret in AWS Secrets Manager
 #   - EKS_CLUSTER_NAME: Name of the EKS cluster
+#   - ECR_REPOSITORY: ECR repository name (e.g., practice-project-prod-app)
 #
 # AWS Secrets Manager Setup:
 #   The secret should be stored as JSON with the following structure:
 #   {
 #     "API_KEY": "your-actual-api-key-value"
 #   }
-#   Alternatively, store as plain text and modify line 204 accordingly.
 #
 # IAM Role Permissions Required:
 #   - secretsmanager:GetSecretValue
 #   - eks:DescribeCluster
 #   - eks:ListClusters
+#   - ecr:GetAuthorizationToken
+#   - ecr:BatchCheckLayerAvailability
+#   - ecr:PutImage
+#   - ecr:InitiateLayerUpload
+#   - ecr:UploadLayerPart
+#   - ecr:CompleteLayerUpload
 #
 name: CI/CD Pipeline
 
@@ -39,18 +46,18 @@ on:
       - '.github/workflows/**'
 
 env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+  ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+  IMAGE_TAG: ${{ github.sha }}
 
 jobs:
-  build-and-test:
+  build-and-push:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write
+      id-token: write
     outputs:
-      image-tag: ${{ steps.meta.outputs.tags }}
-      image-digest: ${{ steps.build.outputs.digest }}
+      image-uri: ${{ steps.image-info.outputs.image-uri }}
     
     steps:
       - name: Checkout code
@@ -61,74 +68,66 @@ jobs:
             kube
           sparse-checkout-cone-mode: false
 
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-        with:
-          driver-opts: |
-            network=host
-            image=moby/buildkit:buildx-stable-1
 
-      - name: Log in to Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract metadata for Docker
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=sha,prefix={{branch}}-
-            type=raw,value=latest,enable={{is_default_branch}}
-
-      - name: Build and push Docker image
+      - name: Build and push Docker image to ECR
         id: build
         uses: docker/build-push-action@v5
         with:
           context: ./src
           file: ./src/Dockerfile
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: |
-            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache
-            type=gha
-          cache-to: |
-            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache,mode=max
-            type=gha,mode=max
+          tags: |
+            ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+            ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           platforms: linux/amd64
           provenance: false
           sbom: false
 
+      - name: Set image info
+        id: image-info
+        run: |
+          echo "image-uri=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}" >> $GITHUB_OUTPUT
+
   test:
-    needs: build-and-test
+    needs: build-and-push
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: read
+      id-token: write
     
     steps:
-      - name: Log in to Container Registry
-        uses: docker/login-action@v3
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
 
       - name: Pull and test image
         run: |
-          IMAGE_TAG=$(echo "${{ needs.build-and-test.outputs.image-tag }}" | head -n 1)
-          echo "Testing image: $IMAGE_TAG"
+          IMAGE_URI="${{ needs.build-and-push.outputs.image-uri }}"
+          echo "Testing image: $IMAGE_URI"
           
-          docker pull "$IMAGE_TAG"
+          docker pull "$IMAGE_URI"
           docker run -d --name test-container -p 3000:3000 \
             -e PORT=3000 \
-            "$IMAGE_TAG"
+            "$IMAGE_URI"
           
           # Wait for container to be ready
           echo "Waiting for container to start..."
@@ -177,12 +176,11 @@ jobs:
           docker system prune -f || true
 
   deploy:
-    needs: [build-and-test, test]
+    needs: [build-and-push, test]
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     permissions:
       contents: read
-      packages: read
       id-token: write
     concurrency:
       group: deploy-${{ github.ref }}
@@ -257,7 +255,9 @@ jobs:
         run: |
           cd kube/helm
           
-          IMAGE_TAG=$(echo "${{ needs.build-and-test.outputs.image-tag }}" | head -n 1)
+          IMAGE_URI="${{ needs.build-and-push.outputs.image-uri }}"
+          IMAGE_REPO="${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}"
+          IMAGE_TAG="${{ env.IMAGE_TAG }}"
           
           # Verify API_KEY is available
           if [ -z "$API_KEY" ]; then
@@ -266,27 +266,28 @@ jobs:
           fi
           
           echo "Deploying application with Helm..."
+          echo "Image: $IMAGE_REPO:$IMAGE_TAG"
           
           helm upgrade --install nodejs-simple-app . \
-            --namespace default \
+            --namespace prod \
             --create-namespace \
             --atomic \
             --cleanup-on-fail \
             --wait \
             --timeout 8m \
-            --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
-            --set image.tag=${{ github.sha }} \
+            --set image.repository=$IMAGE_REPO \
+            --set image.tag=$IMAGE_TAG \
             --set-string secret.apiKey.value="$API_KEY"
 
       - name: Verify deployment
         timeout-minutes: 5
         run: |
-          kubectl rollout status deployment/nodejs-simple-app -n default --timeout=3m
+          kubectl rollout status deployment/nodejs-simple-app -n prod --timeout=3m
           
           # Wait for pods to be ready
           kubectl wait --for=condition=ready pod \
             -l app.kubernetes.io/name=nodejs-simple-app \
-            -n default \
+            -n prod \
             --timeout=3m
           
           echo "✓ Deployment successful!"
@@ -295,5 +296,5 @@ jobs:
         if: failure()
         run: |
           echo "✗ Deployment failed, rolling back..."
-          helm rollback nodejs-simple-app -n default || true
+          helm rollback nodejs-simple-app -n prod || true
 

@@ -34,8 +34,8 @@ module "eks" {
   kubernetes_version      = "1.34"
   subnet_ids              = module.vpc.private_subnet_ids
   endpoint_private_access = true
-  endpoint_public_access  = false
-  public_access_cidrs     = []
+  endpoint_public_access  = true
+  public_access_cidrs     = ["0.0.0.0/0"]
   desired_size            = var.node_desired_size
   max_size                = var.node_max_size
   min_size                = var.node_min_size
@@ -53,7 +53,7 @@ module "ecr" {
 
   project                  = var.project
   environment              = var.environment
-  repository_names         = ["app", "worker"]
+  repository_names         = ["app"]
   image_tag_mutability     = "IMMUTABLE"
   scan_on_push             = true
   enable_deletion_protection = true

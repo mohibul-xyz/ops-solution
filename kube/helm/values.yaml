@@ -92,3 +92,21 @@ secret:
     # Mount path for the secret file in the container
     mountPath: "/etc/secrets"
 
+httproute:
+  enabled: true
+  gateway:
+    name: nodejs-app-gateway
+    namespace: prod
+    sectionName: https
+  hostnames:
+    - "api.mohibulalam.xyz"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: ""  # Will use the service name automatically
+          port: 3000
+          weight: 100
+
