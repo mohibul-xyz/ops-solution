@@ -3,6 +3,7 @@ package terraform.security
 
 import future.keywords.contains
 import future.keywords.if
+import future.keywords.in
 
 # Ensure all S3 buckets are encrypted
 deny[msg] {

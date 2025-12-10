@@ -3,6 +3,7 @@ package terraform.cost
 
 import future.keywords.contains
 import future.keywords.if
+import future.keywords.in
 
 # Define allowed instance types per environment
 allowed_dev_instances := ["t3.micro", "t3.small", "t3.medium", "t2.micro", "t2.small", "t2.medium"]
