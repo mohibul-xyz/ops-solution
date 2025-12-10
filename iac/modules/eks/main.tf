@@ -45,6 +45,7 @@ resource "aws_iam_role" "eks_cluster" {
     {
       Name        = "${var.cluster_name}-cluster-role"
       Environment = var.environment
+      ManagedBy   = "Terraform"
     }
   )
 }
@@ -134,6 +135,7 @@ resource "aws_launch_template" "eks_nodes" {
     {
       Name        = "${var.cluster_name}-launch-template"
       Environment = var.environment
+      ManagedBy   = "Terraform"
     }
   )
 }
@@ -164,6 +166,7 @@ resource "aws_eks_node_group" "main" {
     {
       Name        = "${var.cluster_name}-node-group"
       Environment = var.environment
+      ManagedBy   = "Terraform"
     }
   )
 
@@ -188,6 +191,7 @@ resource "aws_iam_role" "eks_node_group" {
     {
       Name        = "${var.cluster_name}-node-group-role"
       Environment = var.environment
+      ManagedBy   = "Terraform"
     }
   )
 }

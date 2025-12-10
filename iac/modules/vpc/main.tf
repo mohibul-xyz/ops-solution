@@ -29,6 +29,7 @@ resource "aws_internet_gateway" "main" {
       Name        = "${var.project}-${var.environment}-igw"
       Environment = var.environment
       Project     = var.project
+      ManagedBy   = "Terraform"
     }
   )
 }
@@ -48,6 +49,7 @@ resource "aws_subnet" "public" {
       Environment = var.environment
       Project     = var.project
       Type        = "public"
+      ManagedBy   = "Terraform"
     }
   )
 }
@@ -67,6 +69,7 @@ resource "aws_subnet" "private" {
       Environment = var.environment
       Project     = var.project
       Type        = "private"
+      ManagedBy   = "Terraform"
     }
   )
 }
@@ -82,6 +85,7 @@ resource "aws_eip" "nat" {
       Name        = "${var.project}-${var.environment}-nat-eip"
       Environment = var.environment
       Project     = var.project
+      ManagedBy   = "Terraform"
     }
   )
 
@@ -100,6 +104,7 @@ resource "aws_nat_gateway" "main" {
       Name        = "${var.project}-${var.environment}-nat-gateway"
       Environment = var.environment
       Project     = var.project
+      ManagedBy   = "Terraform"
     }
   )
 
@@ -122,6 +127,7 @@ resource "aws_route_table" "public" {
       Environment = var.environment
       Project     = var.project
       Type        = "public"
+      ManagedBy   = "Terraform"
     }
   )
 }
@@ -137,6 +143,7 @@ resource "aws_route_table" "private" {
       Environment = var.environment
       Project     = var.project
       Type        = "private"
+      ManagedBy   = "Terraform"
     }
   )
 }
