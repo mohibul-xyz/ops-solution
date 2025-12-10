@@ -11,9 +11,9 @@ private_subnets    = ["10.1.10.0/24", "10.1.20.0/24", "10.1.30.0/24"]
 enable_nat_gateway = true
 
 # EKS Node Group Configuration
-node_desired_size = 3
-node_min_size     = 3
-node_max_size     = 10
+node_desired_size = 1
+node_min_size     = 1
+node_max_size     = 2
 
 # Tags
 tags = {

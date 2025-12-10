@@ -39,7 +39,7 @@ module "eks" {
   desired_size            = var.node_desired_size
   max_size                = var.node_max_size
   min_size                = var.node_min_size
-  instance_types          = ["t3.large"]
+  instance_types          = ["m6a.large"]
   disk_size               = 50
 
   tags = var.tags
