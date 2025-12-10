@@ -70,6 +70,23 @@ jobs:
             -backend-config=backend-prod.hcl \
             -upgrade
 
+      - name: Fetch prod.tfvars from Parameter Store
+        run: |
+          echo "Fetching prod.tfvars from AWS Parameter Store..."
+          aws ssm get-parameter \
+            --name "/ops/prod/tfvars" \
+            --with-decryption \
+            --query 'Parameter.Value' \
+            --output text > prod.tfvars
+          
+          echo "✅ prod.tfvars file created successfully"
+          
+          # Verify file exists and has content
+          if [ ! -s prod.tfvars ]; then
+            echo "❌ prod.tfvars is empty or missing"
+            exit 1
+          fi
+
       - name: Terraform Plan
         id: plan
         run: |

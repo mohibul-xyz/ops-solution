@@ -10,6 +10,15 @@
 *.p12
 *.pfx
 
+iac/.terraform.lock.hcl
+iac/terraform.tfstate
+iac/terraform.tfstate.backup
+iac/terraform.tfstate.lock.info
+iac/terraform.tfstate.lock.backup
+iac/terraform.tfstate.lock.backup.info
+iac/prod.tfvars
+iac/dev.tfvars
+
 # ============================================
 # Node.js / JavaScript
 # ============================================
