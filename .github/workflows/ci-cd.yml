@@ -57,6 +57,8 @@ jobs:
       id-token: write
     outputs:
       image-uri: ${{ steps.image-info.outputs.image-uri }}
+      ecr-registry: ${{ steps.ecr-vars.outputs.ecr-registry }}
+      ecr-repository: ${{ steps.ecr-vars.outputs.ecr-repository }}
     
     steps:
       - name: Checkout code
@@ -115,14 +117,16 @@ jobs:
 
       - name: Set image info
         id: image-info
+        if: success()
         run: |
           IMAGE_URI="${{ steps.ecr-vars.outputs.ecr-registry }}/${{ steps.ecr-vars.outputs.ecr-repository }}:${{ env.IMAGE_TAG }}"
           echo "image-uri=$IMAGE_URI" >> $GITHUB_OUTPUT
-          echo "Built and pushed: $IMAGE_URI"
+          echo "✓ Successfully built and pushed: $IMAGE_URI"
 
   test:
     needs: build-and-push
     runs-on: ubuntu-latest
+    if: success()
     permissions:
       contents: read
       id-token: write
@@ -140,6 +144,22 @@ jobs:
       - name: Pull and test image
         run: |
           IMAGE_URI="${{ needs.build-and-push.outputs.image-uri }}"
+          
+          # Fallback: construct from separate outputs if image-uri is empty
+          if [ -z "$IMAGE_URI" ]; then
+            ECR_REGISTRY="${{ needs.build-and-push.outputs.ecr-registry }}"
+            ECR_REPO="${{ needs.build-and-push.outputs.ecr-repository }}"
+            IMAGE_TAG="${{ env.IMAGE_TAG }}"
+            IMAGE_URI="${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG}"
+          fi
+          
+          # Validate IMAGE_URI is not empty
+          if [ -z "$IMAGE_URI" ] || [ "$IMAGE_URI" == "::" ]; then
+            echo "ERROR: Image URI is empty or invalid. Build job may have failed."
+            echo "Check the build-and-push job logs for errors."
+            exit 1
+          fi
+          
           echo "Testing image: $IMAGE_URI"
           
           docker pull "$IMAGE_URI"
