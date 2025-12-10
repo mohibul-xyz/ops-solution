@@ -207,126 +207,7 @@ ops-solution/
 └── README.md                      # This file
 ```
 
-## 🚀 Getting Started
 
-### Prerequisites
-
-Before you begin, ensure you have the following installed and configured:
-
-#### Required Tools
-- **AWS CLI** (>= 2.x) - [Installation Guide](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
-- **Terraform** (>= 1.6.0) - [Installation Guide](https://developer.hashicorp.com/terraform/downloads)
-- **kubectl** (>= 1.27) - [Installation Guide](https://kubernetes.io/docs/tasks/tools/)
-- **Helm** (>= 3.13) - [Installation Guide](https://helm.sh/docs/intro/install/)
-- **OPA** (>= 0.59) - [Installation Guide](https://www.openpolicyagent.org/docs/latest/#running-opa)
-- **Docker** (>= 20.x) - [Installation Guide](https://docs.docker.com/get-docker/)
-
-#### AWS Prerequisites
-- AWS Account with appropriate permissions
-- AWS CLI configured with credentials:
-  ```bash
-  aws configure
-  ```
-
-#### Verify Installation
-```bash
-# Check versions
-terraform version
-aws --version
-kubectl version --client
-helm version
-opa version
-docker --version
-```
-
-### Quick Start
-
-#### 1. Clone the Repository
-```bash
-git clone https://github.com/username/ops-solution.git
-cd ops-solution
-```
-
-#### 2. Set Up AWS Backend (One-time setup)
-```bash
-# Create S3 bucket for Terraform state
-aws s3api create-bucket \
-  --bucket ops-solution-terraform-state \
-  --region ap-southeast-1 \
-  --create-bucket-configuration LocationConstraint=ap-southeast-1
-
-# Enable versioning
-aws s3api put-bucket-versioning \
-  --bucket ops-solution-terraform-state \
-  --versioning-configuration Status=Enabled
-
-# Create DynamoDB table for state locking
-aws dynamodb create-table \
-  --table-name ops-solution-terraform-locks \
-  --attribute-definitions AttributeName=LockID,AttributeType=S \
-  --key-schema AttributeName=LockID,KeyType=HASH \
-  --billing-mode PAY_PER_REQUEST \
-  --region ap-southeast-1
-```
-
-#### 3. Deploy Infrastructure
-```bash
-cd iac/environment/dev
-
-# Initialize Terraform
-terraform init -backend-config=../../backend-dev.hcl
-
-# Review plan
-terraform plan -var-file=dev.tfvars
-
-# Validate with OPA
-terraform plan -var-file=dev.tfvars -out=tfplan.binary
-terraform show -json tfplan.binary > tfplan.json
-../../scripts/validate-with-opa.sh tfplan.json
-
-# Apply
-terraform apply -var-file=dev.tfvars
-```
-
-#### 4. Configure kubectl
-```bash
-# Update kubeconfig
-aws eks update-kubeconfig \
-  --name $(terraform output -raw eks_cluster_name) \
-  --region ap-southeast-1
-
-# Verify connection
-kubectl get nodes
-```
-
-#### 5. Deploy Application
-```bash
-cd ../../../kube/helm
-
-# Install Gateway API CRDs (if not already installed)
-kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml
-
-# Deploy with Helm
-helm install nodejs-simple-app . \
-  --set image.tag=latest \
-  --set-string secret.apiKey.value="your-api-key"
-```
-
-#### 6. Verify Deployment
-```bash
-# Check pods
-kubectl get pods
-
-# Check gateway and routes
-kubectl get gateway
-kubectl get httproute
-
-# Test the application
-kubectl port-forward svc/nodejs-simple-app 8080:3000
-curl http://localhost:8080/health
-```
-
-For detailed setup instructions, see [iac/SETUP.md](iac/SETUP.md).
 
 ## 🏗️ Infrastructure as Code
 
@@ -389,24 +270,24 @@ The project supports multiple environments with environment-specific configurati
 OPA (Open Policy Agent) policies enforce compliance and best practices:
 
 #### Terraform Best Practices (`terraform.rego`)
-- ✅ Required tags enforcement (Environment, ManagedBy)
-- ✅ VPC DNS settings validation
-- ✅ EKS security configuration checks
-- ✅ Security group rule validation
-- ✅ Naming convention enforcement
+- Required tags enforcement (Environment, ManagedBy)
+- VPC DNS settings validation
+- EKS security configuration checks
+- Security group rule validation
+- Naming convention enforcement
 
 #### Security Policies (`security.rego`)
-- ✅ Encryption at rest (EBS, S3, RDS)
-- ✅ IMDSv2 requirement
-- ✅ Security group port restrictions
-- ✅ Public IP assignment validation
-- ✅ IAM trust policy validation
+- Encryption at rest (EBS, S3, RDS)
+- IMDSv2 requirement
+- Security group port restrictions
+- Public IP assignment validation
+- IAM trust policy validation
 
 #### Cost Control (`cost_control.rego`)
-- ✅ Instance type restrictions per environment
-- ✅ Disk size limits
-- ✅ Node count limits
-- ✅ Cost center tagging requirements
+- Instance type restrictions per environment
+- Disk size limits
+- Node count limits
+- Cost center tagging requirements
 
 **Running Validation**:
 ```bash
@@ -612,95 +493,42 @@ All changes must pass OPA validation:
 # → cost_control.rego (cost governance)
 ```
 
-### Pipeline Triggers
-
-| Event | Application Pipeline | Infrastructure Pipeline |
-|-------|---------------------|------------------------|
-| Push to `main` | Build → Test → Deploy | Plan → Apply (dev) |
-| Push to `develop` | Build → Test | Plan only |
-| Pull Request | Build → Test | Plan both envs |
-| Manual Trigger | - | Plan → Apply (selected env) |
-
-### Required GitHub Secrets
-
-Configure these in repository settings → Secrets and variables → Actions:
-
-| Secret Name | Description | Used By |
-|-------------|-------------|---------|
-| `AWS_ROLE_ARN` | IAM role ARN for dev/staging | Both pipelines |
-| `AWS_PROD_ROLE_ARN` | IAM role ARN for production | Infrastructure pipeline |
-| `AWS_REGION` | AWS region (e.g., ap-southeast-1) | Both pipelines |
-| `SECRET_MANAGER_NAME` | Name of secret in Secrets Manager | Application pipeline |
-| `EKS_CLUSTER_NAME` | Name of EKS cluster | Application pipeline |
-
-### Setting Up GitHub OIDC
-
-1. Create OIDC provider in AWS:
-```bash
-aws iam create-open-id-connect-provider \
-  --url https://token.actions.githubusercontent.com \
-  --client-id-list sts.amazonaws.com \
-  --thumbprint-list 6938fd4d98bab03faadb97b34396831e3780aea1
-```
-
-2. Create IAM role with trust policy:
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [{
-    "Effect": "Allow",
-    "Principal": {
-      "Federated": "arn:aws:iam::ACCOUNT_ID:oidc-provider/token.actions.githubusercontent.com"
-    },
-    "Action": "sts:AssumeRoleWithWebIdentity",
-    "Condition": {
-      "StringEquals": {
-        "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
-      },
-      "StringLike": {
-        "token.actions.githubusercontent.com:sub": "repo:ORG/REPO:*"
-      }
-    }
-  }]
-}
-```
-
 ## 🔒 Security
 
 This project implements multiple layers of security:
 
 ### Infrastructure Security
-- ✅ **Network Isolation**: Private subnets for workloads, public subnets only for ingress
-- ✅ **Encryption**: EBS volumes encrypted with AWS KMS
-- ✅ **IMDSv2**: Enforced on all EC2 instances (prevents SSRF attacks)
-- ✅ **Security Groups**: Restrictive ingress/egress rules, no unrestricted SSH
-- ✅ **VPC Flow Logs**: Network traffic monitoring and analysis
+- **Network Isolation**: Private subnets for workloads, public subnets only for ingress
+- **Encryption**: EBS volumes encrypted with AWS KMS
+- **IMDSv2**: Enforced on all EC2 instances (prevents SSRF attacks)
+- **Security Groups**: Restrictive ingress/egress rules, no unrestricted SSH
+- **VPC Flow Logs**: Network traffic monitoring and analysis
 
 ### Application Security
-- ✅ **Non-Root Containers**: Runs as user ID 1001
-- ✅ **Minimal Base Image**: Alpine Linux (node:18-alpine)
-- ✅ **Dropped Capabilities**: All Linux capabilities dropped
-- ✅ **Read-Only Root Filesystem**: Optional hardening
-- ✅ **No Privilege Escalation**: Prevents container breakout
+- **Non-Root Containers**: Runs as user ID 1001
+- **Minimal Base Image**: Alpine Linux (node:18-alpine)
+- **Dropped Capabilities**: All Linux capabilities dropped
+- **Read-Only Root Filesystem**: Optional hardening
+- **No Privilege Escalation**: Prevents container breakout
 
 ### Secrets Management
-- ✅ **AWS Secrets Manager**: Centralized secret storage
-- ✅ **Rotation Support**: Automatic secret rotation capabilities
-- ✅ **Access Control**: IAM policies for secret access
-- ✅ **Audit Logging**: CloudTrail logs all secret access
-- ✅ **Secret Masking**: Secrets masked in CI/CD logs
+- **AWS Secrets Manager**: Centralized secret storage
+- **Rotation Support**: Automatic secret rotation capabilities
+- **Access Control**: IAM policies for secret access
+- **Audit Logging**: CloudTrail logs all secret access
+- **Secret Masking**: Secrets masked in CI/CD logs
 
 ### Access Control
-- ✅ **IAM Roles**: IRSA for pod-level permissions
-- ✅ **RBAC**: Kubernetes role-based access control
-- ✅ **OIDC Authentication**: Passwordless CI/CD authentication
-- ✅ **Principle of Least Privilege**: Minimal required permissions
+- **IAM Roles**: IRSA for pod-level permissions
+- **RBAC**: Kubernetes role-based access control
+- **OIDC Authentication**: Passwordless CI/CD authentication
+- **Principle of Least Privilege**: Minimal required permissions
 
 ### Compliance & Governance
-- ✅ **Policy as Code**: OPA policies enforce security requirements
-- ✅ **Automated Scanning**: Security validation in CI/CD
-- ✅ **Audit Trail**: CloudTrail and CloudWatch logs
-- ✅ **Compliance Checks**: Pre-deployment validation
+- **Policy as Code**: OPA policies enforce security requirements
+- **Automated Scanning**: Security validation in CI/CD
+- **Audit Trail**: CloudTrail and CloudWatch logs
+- **Compliance Checks**: Pre-deployment validation
 
 ## 📊 Monitoring & Observability
 
@@ -742,15 +570,15 @@ Automated cost controls through policy enforcement:
 - **Environment**: Required for resource tracking
 
 ### Infrastructure Optimization
-- ✅ **NAT Gateway**: Single NAT Gateway in dev, multiple in prod
-- ✅ **Auto Scaling**: Node groups scale based on demand
-- ✅ **Spot Instances**: (Can be enabled) Reduce compute costs
-- ✅ **Reserved Instances**: (Recommended) For production long-term workloads
+- **NAT Gateway**: Single NAT Gateway in dev, multiple in prod
+- **Auto Scaling**: Node groups scale based on demand
+- **Spot Instances**: (Can be enabled) Reduce compute costs
+- **Reserved Instances**: (Recommended) For production long-term workloads
 
 ### Application Optimization
-- ✅ **Resource Limits**: Prevents resource hogging
-- ✅ **Horizontal Pod Autoscaling**: (Can be enabled) Scale based on metrics
-- ✅ **Vertical Pod Autoscaling**: (Can be enabled) Right-size resources
+- **Resource Limits**: Prevents resource hogging
+- **Horizontal Pod Autoscaling**: (Can be enabled) Scale based on metrics
+- **Vertical Pod Autoscaling**: (Can be enabled) Right-size resources
 
 ### Cost Monitoring
 ```bash
@@ -771,212 +599,6 @@ This project follows **GitHub Flow** - a simple, branch-based workflow:
 - **Protection**: Requires PR reviews, passing CI checks
 - **Auto-Deploy**: Merges to `main` trigger dev deployment
 - **Stability**: Always deployable
-
-### Feature Branches
-```bash
-# Create feature branch
-git checkout -b feature/add-authentication
-git push -u origin feature/add-authentication
-
-# Create PR when ready
-# Merge to main after approval
-```
-
-### Hotfix Branches
-```bash
-# Create hotfix branch
-git checkout -b hotfix/fix-health-endpoint
-git push -u origin hotfix/fix-health-endpoint
-
-# Create PR with "hotfix" label
-# Fast-track review and merge
-```
-
-### Branch Naming Convention
-- Features: `feature/<description>`
-- Bug fixes: `fix/<description>`
-- Hotfixes: `hotfix/<description>`
-- Documentation: `docs/<description>`
-- Infrastructure: `infra/<description>`
-
-### Workflow
-1. Create feature branch from `main`
-2. Commit changes with descriptive messages
-3. Push branch and create Pull Request
-4. CI/CD runs automatically:
-   - Build and test application
-   - Validate Terraform changes
-   - Run OPA policy checks
-5. Request code review
-6. Address review comments
-7. Merge to `main` after approval
-8. Automatic deployment to dev
-9. Manual deployment to prod (via workflow dispatch)
-
-### Commit Message Format
-```
-<type>(<scope>): <subject>
-
-<body>
-
-<footer>
-```
-
-**Types**: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
-
-**Example**:
-```
-feat(api): add authentication middleware
-
-Implements JWT-based authentication for API endpoints.
-
-Closes #123
-```
-
-## 🤝 Contributing
-
-We welcome contributions! Please follow these guidelines:
-
-### How to Contribute
-
-1. **Fork the repository**
-2. **Create a feature branch** (`git checkout -b feature/amazing-feature`)
-3. **Make your changes**:
-   - Follow existing code style
-   - Add tests if applicable
-   - Update documentation
-4. **Run local validation**:
-   ```bash
-   # Terraform
-   terraform fmt -recursive
-   terraform validate
-   
-   # Application
-   docker build -t test:local ./src
-   docker run -p 3000:3000 test:local
-   ```
-5. **Commit your changes** (`git commit -m 'feat: add amazing feature'`)
-6. **Push to your fork** (`git push origin feature/amazing-feature`)
-7. **Create a Pull Request**
-
-### Pull Request Checklist
-- [ ] Code follows project style guidelines
-- [ ] Tests pass locally
-- [ ] Documentation updated
-- [ ] Terraform formatted (`terraform fmt`)
-- [ ] OPA policies validated
-- [ ] Commit messages follow convention
-- [ ] PR description explains changes
-
-### Code Review Process
-1. Automated checks must pass (CI/CD)
-2. At least one approval required
-3. No unresolved comments
-4. Squash and merge preferred
-
-## 🔧 Troubleshooting
-
-### Common Issues
-
-#### 1. Terraform Backend Initialization Fails
-```bash
-Error: Failed to get existing workspaces: NoSuchBucket
-```
-**Solution**: Create S3 backend first:
-```bash
-aws s3api create-bucket --bucket ops-solution-terraform-state --region ap-southeast-1
-```
-
-#### 2. OPA Validation Failures
-```bash
-Error: Policy violation: EKS cluster must have private endpoint access enabled
-```
-**Solution**: Fix the Terraform configuration and re-run plan:
-```bash
-# Review policy
-cat iac/policies/terraform.rego
-
-# Fix configuration
-vim iac/environment/dev/main.tf
-
-# Re-validate
-terraform plan -var-file=dev.tfvars -out=tfplan.binary
-terraform show -json tfplan.binary > tfplan.json
-./scripts/validate-with-opa.sh tfplan.json
-```
-
-#### 3. Helm Deployment Fails
-```bash
-Error: UPGRADE FAILED: pre-upgrade hooks failed
-```
-**Solution**: Check pod logs and rollback:
-```bash
-kubectl get pods
-kubectl logs <pod-name>
-helm rollback nodejs-simple-app
-```
-
-#### 4. Health Checks Failing
-```bash
-Warning: Unhealthy  Readiness probe failed: Get "http://10.0.1.5:3000/health": dial tcp 10.0.1.5:3000: connect: connection refused
-```
-**Solution**: Verify application is listening on correct port:
-```bash
-kubectl exec -it <pod-name> -- sh
-netstat -tulpn | grep 3000
-```
-
-#### 5. Gateway API Not Working
-```bash
-Error: no matches for kind "HTTPRoute" in version "gateway.networking.k8s.io/v1"
-```
-**Solution**: Install Gateway API CRDs:
-```bash
-kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml
-```
-
-#### 6. AWS OIDC Authentication Fails
-```bash
-Error: Not authorized to perform sts:AssumeRoleWithWebIdentity
-```
-**Solution**: Verify IAM role trust policy allows GitHub Actions:
-```bash
-aws iam get-role --role-name github-actions-terraform-dev
-# Check trust policy includes token.actions.githubusercontent.com
-```
-
-### Debug Commands
-
-```bash
-# Kubernetes
-kubectl get all -A
-kubectl describe pod <pod-name>
-kubectl logs <pod-name> --previous
-kubectl get events --sort-by='.lastTimestamp'
-
-# Helm
-helm list
-helm history nodejs-simple-app
-helm get values nodejs-simple-app
-
-# Terraform
-terraform show
-terraform state list
-terraform state show <resource>
-TF_LOG=DEBUG terraform plan
-
-# AWS
-aws eks describe-cluster --name <cluster-name>
-aws sts get-caller-identity
-aws logs tail /aws/eks/<cluster-name>/cluster --follow
-```
-
-### Getting Help
-
-- **Documentation**: Check [iac/README.md](iac/README.md) and [iac/SETUP.md](iac/SETUP.md)
-- **Issues**: Search existing GitHub issues
-- **Logs**: Check CloudWatch Logs for detailed errors
-- **Community**: AWS EKS, Terraform, and Kubernetes communities
 
 ## 📄 License
 
