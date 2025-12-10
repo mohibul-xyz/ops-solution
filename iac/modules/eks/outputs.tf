@@ -78,8 +78,3 @@ output "addon_versions" {
   }
 }
 
-output "ebs_csi_driver_role_arn" {
-  description = "IAM role ARN for EBS CSI driver (if enabled)"
-  value       = length(aws_iam_role.ebs_csi_driver) > 0 ? aws_iam_role.ebs_csi_driver[0].arn : null
-}
-

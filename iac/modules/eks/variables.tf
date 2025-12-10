@@ -92,9 +92,6 @@ variable "addons" {
     },
     {
       name = "coredns"
-    },
-    {
-      name = "aws-ebs-csi-driver"
     }
   ]
 }
