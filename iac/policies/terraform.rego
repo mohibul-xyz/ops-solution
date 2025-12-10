@@ -5,10 +5,33 @@ import future.keywords.contains
 import future.keywords.if
 import future.keywords.in
 
-# Deny resources without required tags
+# Resources that do NOT support tags in AWS
+non_taggable_resources := [
+    "aws_iam_role",
+    "aws_iam_role_policy",
+    "aws_iam_role_policy_attachment",
+    "aws_iam_policy",
+    "aws_iam_policy_attachment",
+    "aws_route",
+    "aws_route_table_association",
+    "aws_ecr_lifecycle_policy",
+    "aws_ecr_repository_policy",
+    "aws_ecr_registry_policy",
+    "aws_ecr_registry_scanning_configuration",
+    "aws_vpc_dhcp_options_association",
+    "aws_vpc_ipv4_cidr_block_association"
+]
+
+# Helper to check if resource supports tags
+supports_tags(resource_type) {
+    not resource_type in non_taggable_resources
+}
+
+# Deny resources without required tags (only for resources that support tags)
 deny[msg] {
     resource := input.resource_changes[_]
     resource.change.actions[_] == "create"
+    supports_tags(resource.type)
     not resource.change.after.tags.Environment
     msg := sprintf("Resource '%s' is missing required tag: Environment", [resource.address])
 }
@@ -16,6 +39,7 @@ deny[msg] {
 deny[msg] {
     resource := input.resource_changes[_]
     resource.change.actions[_] == "create"
+    supports_tags(resource.type)
     not resource.change.after.tags.ManagedBy
     msg := sprintf("Resource '%s' is missing required tag: ManagedBy", [resource.address])
 }
