@@ -1,13 +1,14 @@
-# Node.js Application on AWS EKS - Complete DevOps Solution
+# Node.js Application on AWS EKS - DevOps Solution
 
-[![CI/CD Pipeline](https://github.com/username/ops-solution/workflows/CI/CD%20Pipeline/badge.svg)](https://github.com/username/ops-solution/actions)
-[![Terraform CI/CD](https://github.com/username/ops-solution/workflows/Terraform%20CI/CD%20with%20OPA/badge.svg)](https://github.com/username/ops-solution/actions)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+A complete DevOps implementation demonstrating infrastructure as code, containerization, Kubernetes orchestration, CI/CD automation, and policy-based governance for deploying a Node.js application on AWS EKS.
 
-A production-ready, enterprise-grade DevOps solution showcasing infrastructure as code (IaC), containerization, Kubernetes orchestration, CI/CD automation, and security best practices for deploying a Node.js application on AWS EKS.
+## Table of Contents
 
-## 📋 Table of Contents
-
+- [Deliverables](#deliverables)
+  - [Infrastructure as Code (Terraform)](#1-infrastructure-as-code-terraform)
+  - [Kubernetes Deployment Manifests](#2-kubernetes-deployment-manifests)
+  - [CI/CD Pipeline Configuration](#3-cicd-pipeline-configuration)
+  - [Documentation](#4-comprehensive-documentation)
 - [Overview](#overview)
 - [Architecture](#architecture)
 - [Features](#features)
@@ -15,22 +16,121 @@ A production-ready, enterprise-grade DevOps solution showcasing infrastructure a
 - [Project Structure](#project-structure)
 - [Getting Started](#getting-started)
   - [Prerequisites](#prerequisites)
-  - [Quick Start](#quick-start)
+  - [Deployment Steps](#deployment-steps)
 - [Infrastructure as Code](#infrastructure-as-code)
 - [Kubernetes Deployment](#kubernetes-deployment)
 - [CI/CD Pipeline](#cicd-pipeline)
 - [Security](#security)
-- [Monitoring & Observability](#monitoring--observability)
 - [Cost Optimization](#cost-optimization)
-- [Branching Strategy](#branching-strategy)
-- [Contributing](#contributing)
 - [Troubleshooting](#troubleshooting)
-- [License](#license)
 
-## Deliveriables
+## Deliverables
+
+This repository contains all required deliverables for a complete DevOps solution:
+
+### 1. Infrastructure as Code (Terraform)
+- **Location**: `iac/` directory
+- **Components**:
+  - Modular Terraform code for AWS VPC, EKS cluster, and ECR registries
+  - Production and development environment configurations
+  - Backend configuration for S3 state management with native locking
+  - OPA policies for infrastructure validation and compliance
+- **Terraform Plan Output**: 
+  - Static plan output: [`deliverables/tfplan.json`](./deliverables/tfplan.json)
+  - Live CI/CD artifacts available in GitHub Actions workflow runs:
+    - [Workflow Run #20111293368](https://github.com/mohibul-xyz/ops-solution/actions/runs/20111293368) - Production deployment with OPA validation
+    - Artifacts include: `tfplan-prod` (binary) and `tfplan-json-prod` (JSON format)
+- **Documentation**: 
+  - [`iac/README.md`](./iac/README.md) - Complete infrastructure documentation
+  - [`docs/01.IAC.md`](./docs/01.IAC.md) - Detailed IaC guide
+
+### 2. Kubernetes Deployment Manifests
+- **Location**: `k8s/` directory
+- **Helm Charts**: `k8s/helm/simple-api/`
+  - Parameterized deployment configurations
+  - Gateway API resources (GatewayClass, Gateway, HTTPRoute)
+  - Service and ConfigMap definitions
+  - Health check configurations (startup, liveness, readiness probes)
+  - Security contexts and resource management
+- **Features**:
+  - Multi-environment support (dev/prod values)
+  - AWS Secrets Manager integration as k8s secret
+  - Rolling update strategy with zero-downtime
+- **Documentation**: 
+  - [`k8s/helm/simple-api/README.md`](./k8s/helm/simple-api/README.md) - Helm chart documentation
+  - [`docs/02.Application.md`](./docs/02.Application.md) - Application deployment guide
+
+### 3. CI/CD Pipeline Configuration
+- **Location**: `.github/workflows/` directory
+- **Pipelines**:
+  - **`terraform.yml`**: Infrastructure deployment pipeline
+    - Terraform plan and validation
+    - OPA policy checks for production
+    - Automated apply on main branch
+    - AWS OIDC authentication
+    - Parameter Store integration for secure tfvars
+  - **`docker-build.yml`**: Application build and deploy pipeline
+    - Docker multi-stage builds with caching
+    - Image scanning and security checks
+    - ECR push with semantic versioning
+    - Helm deployment to EKS
+    - Automated rollback on failure
+- **Features**:
+  - Automated build, test, and deployment
+  - Policy-as-Code validation
+  - Artifact management
+  - Environment-specific workflows
+  - Secure secrets handling
+- **Documentation**: [`docs/03.Workflow.md`](./docs/03.Workflow.md) - Complete CI/CD guide
+
+### 4. Comprehensive Documentation
+- **Main README** (this file):
+  - Architecture overview with diagrams
+  - Key design decisions and assumptions
+  - Technology stack and features
+  - Step-by-step deployment instructions
+  - Cost analysis and optimization tips
+  - Security best practices
+  - Troubleshooting guide
+- **Structured Documentation** (`docs/` directory):
+  - `01.IAC.md` - Infrastructure as Code deep dive
+  - `02.Application.md` - Application architecture and deployment
+  - `03.Workflow.md` - CI/CD pipeline details
+  - `04.OPA.md` - Policy as Code implementation
+  - `README.md` - Documentation index
+- **Module Documentation**:
+  - Each Terraform module includes its own README with usage examples
+  - Helm charts include comprehensive values documentation
+
+### Additional Deliverables
+
+#### Architecture Diagrams
+- Network architecture diagram showing VPC, subnets, and routing
+- EKS cluster architecture with Gateway API flow
+- CI/CD workflow diagrams
+
+#### Key Assumptions
+- **Cloud Provider**: AWS (ap-southeast-1 region by default)
+- **Kubernetes Version**: 1.34
+- **Networking**: Single NAT Gateway for cost optimization
+- **State Management**: S3 with native state locking (no DynamoDB)
+- **Authentication**: AWS OIDC for GitHub Actions (no long-lived credentials)
+- **Secrets Management**: AWS Parameter Store for tfvars, AWS Secrets Manager for application secrets
+- **Branching Strategy**: GitHub Flow (feature branches → main)
+
+#### Deployment Instructions
+Detailed step-by-step instructions are provided in the [Getting Started](#-getting-started) section below, including:
+1. Prerequisites and tool setup
+2. AWS credentials configuration
+3. Infrastructure provisioning with Terraform
+4. Application deployment with Helm
+5. CI/CD pipeline setup and configuration
+6. Environment-specific considerations
+
+---
 
 
-## 🎯 Overview
+## Overview
 
 This project demonstrates a complete end-to-end DevOps workflow for deploying a simple Node.js REST API application to AWS EKS with enterprise-grade practices:
 
@@ -48,7 +148,7 @@ The application is a lightweight Node.js REST API built with Express that provid
 - `GET /` - Welcome endpoint returning JSON response
 - `GET /health` - Health check endpoint for readiness/liveness probes
 
-## 🏗️ Architecture
+## Architecture
 
 ![Architecture Diagram](./docs/image/architecture.png)
 
@@ -97,7 +197,7 @@ Unlike traditional Ingress controllers, this solution uses **Kubernetes Gateway 
 - Better support for advanced routing scenarios
 - Growing community adoption and vendor support
 
-## ✨ Features
+## Features
 
 ### Infrastructure Management
 - **Modular Terraform Design**: Reusable modules for VPC, EKS, ECR
@@ -128,7 +228,7 @@ Unlike traditional Ingress controllers, this solution uses **Kubernetes Gateway 
 - **Security Policies**: OPA security policies enforcement
 - **Container Security**: Non-root containers, minimal base images
 
-## 🛠️ Technology Stack
+## Technology Stack
 
 ### Infrastructure & Cloud
 - **Cloud Provider**: AWS
@@ -152,7 +252,7 @@ Unlike traditional Ingress controllers, this solution uses **Kubernetes Gateway 
 - **Secrets**: AWS Secrets Manager
 - **Networking**: VPC, NAT Gateway, Security Groups
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 ops-solution/
@@ -212,7 +312,7 @@ ops-solution/
 
 
 
-## 🏗️ Infrastructure as Code
+## Infrastructure as Code
 
 ### Terraform Modules
 
@@ -292,15 +392,7 @@ OPA (Open Policy Agent) policies enforce compliance and best practices:
 - Node count limits
 - Cost center tagging requirements
 
-**Running Validation**:
-```bash
-# Generate plan
-terraform plan -var-file=dev.tfvars -out=tfplan.binary
-terraform show -json tfplan.binary > tfplan.json
 
-# Validate with OPA
-./scripts/validate-with-opa.sh tfplan.json
-```
 
 ### State Management
 
@@ -310,7 +402,7 @@ Terraform state is stored remotely in S3 with:
 - **Locking**: DynamoDB table prevents concurrent modifications
 - **Separate States**: Independent state files per environment
 
-## ☸️ Kubernetes Deployment
+## Kubernetes Deployment
 
 ### Helm Chart
 
@@ -373,39 +465,7 @@ Routes HTTP traffic to backend services with advanced routing rules:
 - Query parameter matching
 - Request/response modification
 
-**Example HTTPRoute**:
-```yaml
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: nodejs-app-route
-spec:
-  parentRefs:
-    - name: main-gateway
-  rules:
-    - matches:
-        - path:
-            type: PathPrefix
-            value: /
-      backendRefs:
-        - name: nodejs-simple-app
-          port: 3000
-```
-
-### Deploying Updates
-
-```bash
-# Update image
-helm upgrade nodejs-simple-app ./kube/helm \
-  --set image.tag=v1.2.3 \
-  --atomic \
-  --wait
-
-# Rollback if needed
-helm rollback nodejs-simple-app
-```
-
-## 🔄 CI/CD Pipeline
+## CI/CD Pipeline
 
 ### Application Pipeline (`ci-cd.yml`)
 
@@ -496,7 +556,7 @@ All changes must pass OPA validation:
 # → cost_control.rego (cost governance)
 ```
 
-## 🔒 Security
+## Security
 
 This project implements multiple layers of security:
 
@@ -533,7 +593,7 @@ This project implements multiple layers of security:
 - **Audit Trail**: CloudTrail and CloudWatch logs
 - **Compliance Checks**: Pre-deployment validation
 
-## 📊 Monitoring & Observability
+## Monitoring & Observability
 
 ### CloudWatch Integration
 - **Container Logs**: Streamed to CloudWatch Logs
@@ -555,7 +615,7 @@ Consider adding these observability tools:
 - **Jaeger/X-Ray**: Distributed tracing
 - **Datadog/New Relic**: Full-stack observability (commercial)
 
-## 💰 Cost Optimization
+## Cost Optimization
 
 ### OPA Cost Policies
 Automated cost controls through policy enforcement:
@@ -574,40 +634,29 @@ Automated cost controls through policy enforcement:
 
 ### Infrastructure Optimization
 - **NAT Gateway**: Single NAT Gateway in dev, multiple in prod
-- **Auto Scaling**: Node groups scale based on demand
-- **Spot Instances**: (Can be enabled) Reduce compute costs
-- **Reserved Instances**: (Recommended) For production long-term workloads
 
-### Application Optimization
-- **Resource Limits**: Prevents resource hogging
-- **Horizontal Pod Autoscaling**: (Can be enabled) Scale based on metrics
-- **Vertical Pod Autoscaling**: (Can be enabled) Right-size resources
+## Troubleshooting
 
-### Cost Monitoring
-```bash
-# View costs by tag
-aws ce get-cost-and-usage \
-  --time-period Start=2024-01-01,End=2024-01-31 \
-  --granularity MONTHLY \
-  --metrics BlendedCost \
-  --group-by Type=TAG,Key=Environment
-```
+### Common Issues
 
-## 🌳 Branching Strategy
+**Terraform State Lock**
+- Ensure S3 bucket exists and has proper permissions
+- Check if state locking is causing issues
+- Use `terraform force-unlock` if needed
 
-This project follows **GitHub Flow** - a simple, branch-based workflow:
+**EKS Node Group Not Ready**
+- Check IAM roles and policies
+- Verify subnet configurations
+- Review security group rules
 
-### Main Branch
-- **Purpose**: Production-ready code
-- **Protection**: Requires PR reviews, passing CI checks
-- **Auto-Deploy**: Merges to `main` trigger dev deployment
-- **Stability**: Always deployable
+**OPA Policy Violations**
+- Review policy error messages
+- Check resource tags
+- Verify instance types match allowed lists
 
-## 📄 License
+**CI/CD Pipeline Failures**
+- Check AWS credentials and OIDC configuration
+- Verify GitHub secrets are properly set
+- Review workflow logs for specific errors
 
-This project is licensed under the MIT License - see below for details:
-
-```
-MIT License
-
-```
+---

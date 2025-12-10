@@ -1,8 +1,8 @@
 # Documentation Index
 
-Welcome to the comprehensive documentation for the Node.js on AWS EKS ops-solution project. This documentation covers all aspects of the DevOps pipeline, from infrastructure provisioning to application deployment.
+This documentation covers all aspects of the DevOps solution, from infrastructure provisioning to application deployment and CI/CD automation.
 
-## 📚 Documentation Structure
+## Documentation Structure
 
 ### Core Documentation
 
@@ -23,7 +23,7 @@ Documentation/
 └── 04.OPA.md             # Enforce policies
 ```
 
-## 🎯 Getting Started
+## Getting Started
 
 ### For New Team Members
 
@@ -56,7 +56,7 @@ Read everything - you'll need comprehensive knowledge of:
 - Policy enforcement
 - Troubleshooting
 
-## 📖 Document Summaries
+## Document Summaries
 
 ### 1. Infrastructure as Code (01.IAC.md)
 
@@ -162,7 +162,7 @@ Read everything - you'll need comprehensive knowledge of:
 
 **When to Reference**: Enforcing standards, adding new policies, debugging policy violations, cost governance
 
-## 🔍 Finding What You Need
+## Finding What You Need
 
 ### By Topic
 
@@ -234,7 +234,7 @@ Read everything - you'll need comprehensive knowledge of:
 2. [Secrets Management](02.Application.md#secrets-management)
 3. [OIDC Authentication](03.Workflow.md#github-oidc-setup)
 
-## 🛠️ Common Workflows
+## Common Workflows
 
 ### Initial Setup
 
@@ -300,7 +300,7 @@ Read everything - you'll need comprehensive knowledge of:
 6. Deploy and enforce
 ```
 
-## 🔗 External Resources
+## External Resources
 
 ### Official Documentation
 - [Terraform Documentation](https://www.terraform.io/docs)
@@ -321,87 +321,36 @@ Read everything - you'll need comprehensive knowledge of:
 - [Terraform Community Forum](https://discuss.hashicorp.com/c/terraform-core)
 - [AWS Subreddit](https://reddit.com/r/aws)
 
-## 📝 Documentation Maintenance
 
-### Keeping Docs Up to Date
 
-When making changes to the project, update relevant documentation:
 
-| Change Type | Documents to Update |
-|-------------|-------------------|
-| New Terraform module | IAC Guide |
-| New Kubernetes resource | Application Guide |
-| New GitHub Actions workflow | Workflow Guide |
-| New OPA policy | OPA Guide |
-| New feature | Main README + relevant guide |
-| Configuration change | Relevant guide |
-
-### Documentation Standards
-
-- **Be specific**: Include exact commands and file paths
-- **Be practical**: Provide working examples
-- **Be current**: Update when code changes
-- **Be helpful**: Include troubleshooting sections
-- **Be clear**: Use diagrams and tables
-
-## 🤝 Contributing to Documentation
-
-Found an issue? Want to improve docs?
-
-1. File an issue describing the problem
-2. Or submit a pull request with improvements
-3. Follow existing documentation style
-4. Test all commands before documenting
-5. Update the index if adding new sections
-
-## 📞 Getting Help
-
-### Documentation Issues
-
-If documentation is unclear:
-1. Check the specific guide's troubleshooting section
-2. Search existing GitHub issues
-3. Create a new issue with:
-   - Which document
-   - What's unclear
-   - What you expected to find
-
-### Technical Issues
-
-For technical problems:
-1. Check relevant troubleshooting section
-2. Review error messages carefully
-3. Enable debug logging
-4. Search community forums
-5. Create detailed issue with reproduction steps
-
-## 🎓 Learning Path
+## Learning Path
 
 ### Beginner (Week 1-2)
-- [ ] Read Main README
-- [ ] Understand project architecture
-- [ ] Set up local development environment
-- [ ] Deploy dev infrastructure
-- [ ] Deploy application locally
-- [ ] Explore Kubernetes resources
+- Read Main README
+- Understand project architecture
+- Set up local development environment
+- Deploy dev infrastructure
+- Deploy application locally
+- Explore Kubernetes resources
 
 ### Intermediate (Week 3-4)
-- [ ] Understand Terraform modules
-- [ ] Learn Helm chart structure
-- [ ] Set up GitHub Actions
-- [ ] Deploy via CI/CD
-- [ ] Modify OPA policies
-- [ ] Troubleshoot common issues
+- Understand Terraform modules
+- Learn Helm chart structure
+- Set up GitHub Actions
+- Deploy via CI/CD
+- Modify OPA policies
+- Troubleshoot common issues
 
 ### Advanced (Week 5+)
-- [ ] Customize infrastructure
-- [ ] Add new modules
-- [ ] Write custom policies
-- [ ] Implement advanced routing
-- [ ] Optimize costs
-- [ ] Production deployment
+- Customize infrastructure
+- Add new modules
+- Write custom policies
+- Implement advanced routing
+- Optimize costs
+- Production deployment
 
-## 📊 Documentation Statistics
+## Documentation Statistics
 
 | Document | Lines | Sections | Code Blocks | Diagrams |
 |----------|-------|----------|-------------|----------|
@@ -411,7 +360,7 @@ For technical problems:
 | 04.OPA.md | ~500 | 10 | 60+ | 1 |
 | **Total** | **~2050** | **38** | **260+** | **8** |
 
-## 🔄 Recent Updates
+## Recent Updates
 
 - **Dec 10, 2025**: Initial comprehensive documentation created
 - All four core guides completed
@@ -421,11 +370,5 @@ For technical problems:
 
 ---
 
-**Ready to get started?** Begin with the [Main README](../README.md) for project overview, then dive into the specific guide you need!
-
-**Questions?** Check the troubleshooting sections or create an issue.
-
-**Contributing?** We welcome documentation improvements! See [Contributing Guidelines](../README.md#contributing).
-
-*Documentation maintained by the DevOps team | Last updated: December 10, 2025*
+*Last updated: December 10, 2025*
 
