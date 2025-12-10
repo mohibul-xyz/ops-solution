@@ -76,10 +76,11 @@ jobs:
       - name: Set ECR variables
         id: ecr-vars
         run: |
-          # Use ECR_REPOSITORY secret if set, otherwise default to 'app'
+          # Use ECR_REPOSITORY secret if set, otherwise construct from project-environment-app
           ECR_REPO="${{ secrets.ECR_REPOSITORY }}"
           if [ -z "$ECR_REPO" ]; then
-            ECR_REPO="app"
+            # Default: practice-project-prod-app (matches Terraform naming)
+            ECR_REPO="practice-project-prod-app"
           fi
           
           ECR_REGISTRY="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com"
