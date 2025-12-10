@@ -225,3 +225,86 @@ resource "aws_iam_role_policy_attachment" "eks_container_registry_policy" {
   role       = aws_iam_role.eks_node_group.name
 }
 
+# ============================================
+# EKS Add-ons
+# ============================================
+
+resource "aws_eks_addon" "addons" {
+  for_each = { for addon in var.addons : addon.name => addon }
+
+  cluster_name                = aws_eks_cluster.main.name
+  addon_name                  = each.value.name
+  addon_version               = try(each.value.version, null)
+  resolve_conflicts_on_update = "PRESERVE"
+  
+  # Attach IAM role for EBS CSI Driver
+  service_account_role_arn = each.value.name == "aws-ebs-csi-driver" && length(aws_iam_role.ebs_csi_driver) > 0 ? aws_iam_role.ebs_csi_driver[0].arn : null
+
+  tags = merge(
+    var.tags,
+    {
+      Name        = "${var.cluster_name}-${each.value.name}"
+      Environment = var.environment
+      ManagedBy   = "Terraform"
+    }
+  )
+
+  depends_on = [
+    aws_eks_cluster.main,
+    aws_eks_node_group.main
+  ]
+}
+
+# IAM Role for EBS CSI Driver (if addon is included)
+resource "aws_iam_role" "ebs_csi_driver" {
+  count = contains([for addon in var.addons : addon.name], "aws-ebs-csi-driver") ? 1 : 0
+
+  name               = "${var.cluster_name}-ebs-csi-driver-role"
+  assume_role_policy = data.aws_iam_policy_document.ebs_csi_driver_assume_role[0].json
+
+  tags = merge(
+    var.tags,
+    {
+      Name        = "${var.cluster_name}-ebs-csi-driver-role"
+      Environment = var.environment
+      ManagedBy   = "Terraform"
+    }
+  )
+}
+
+data "aws_iam_policy_document" "ebs_csi_driver_assume_role" {
+  count = contains([for addon in var.addons : addon.name], "aws-ebs-csi-driver") ? 1 : 0
+
+  statement {
+    effect = "Allow"
+
+    principals {
+      type        = "Federated"
+      identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/${replace(aws_eks_cluster.main.identity[0].oidc[0].issuer, "https://", "")}"]
+    }
+
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+
+    condition {
+      test     = "StringEquals"
+      variable = "${replace(aws_eks_cluster.main.identity[0].oidc[0].issuer, "https://", "")}:sub"
+      values   = ["system:serviceaccount:kube-system:ebs-csi-controller-sa"]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "${replace(aws_eks_cluster.main.identity[0].oidc[0].issuer, "https://", "")}:aud"
+      values   = ["sts.amazonaws.com"]
+    }
+  }
+}
+
+data "aws_caller_identity" "current" {}
+
+resource "aws_iam_role_policy_attachment" "ebs_csi_driver_policy" {
+  count = contains([for addon in var.addons : addon.name], "aws-ebs-csi-driver") ? 1 : 0
+
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+  role       = aws_iam_role.ebs_csi_driver[0].name
+}
+

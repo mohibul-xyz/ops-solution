@@ -27,6 +27,9 @@ A production-ready, enterprise-grade DevOps solution showcasing infrastructure a
 - [Troubleshooting](#troubleshooting)
 - [License](#license)
 
+## Deliveriables
+
+
 ## 🎯 Overview
 
 This project demonstrates a complete end-to-end DevOps workflow for deploying a simple Node.js REST API application to AWS EKS with enterprise-grade practices:

@@ -71,3 +71,15 @@ output "cluster_role_arn" {
   value       = aws_iam_role.eks_cluster.arn
 }
 
+output "addon_versions" {
+  description = "Installed EKS add-on versions"
+  value = {
+    for name, addon in aws_eks_addon.addons : name => addon.addon_version
+  }
+}
+
+output "ebs_csi_driver_role_arn" {
+  description = "IAM role ARN for EBS CSI driver (if enabled)"
+  value       = length(aws_iam_role.ebs_csi_driver) > 0 ? aws_iam_role.ebs_csi_driver[0].arn : null
+}
+

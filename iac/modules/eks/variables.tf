@@ -13,7 +13,7 @@ variable "environment" {
 variable "kubernetes_version" {
   description = "Kubernetes version to use for the EKS cluster"
   type        = string
-  default     = "1.28"
+  default     = "1.34"
 }
 
 variable "subnet_ids" {
@@ -74,5 +74,28 @@ variable "tags" {
   description = "Additional tags for all resources"
   type        = map(string)
   default     = {}
+}
+
+# EKS Add-ons
+variable "addons" {
+  description = "List of EKS add-ons to install. Version is optional - if not provided, AWS uses latest compatible version"
+  type = list(object({
+    name    = string
+    version = optional(string)
+  }))
+  default = [
+    {
+      name = "kube-proxy"
+    },
+    {
+      name = "vpc-cni"
+    },
+    {
+      name = "coredns"
+    },
+    {
+      name = "aws-ebs-csi-driver"
+    }
+  ]
 }
 
