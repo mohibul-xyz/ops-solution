@@ -43,7 +43,7 @@ on:
     paths:
       - 'src/**'
       - 'kube/**'
-      - '.github/workflows/**'
+      - '.github/workflows/ci-cd.yml'
 
 env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
@@ -142,6 +142,8 @@ jobs:
     permissions:
       contents: read
       id-token: write
+    env:
+      ECR_REPOSITORY_NAME: practice-project-prod-app
     
     steps:
       - name: Configure AWS Credentials
@@ -155,22 +157,15 @@ jobs:
 
       - name: Pull and test image
         run: |
-          IMAGE_URI="${{ needs.build-and-push.outputs.image-uri }}"
-          
-          # Fallback: construct from separate outputs if image-uri is empty
-          if [ -z "$IMAGE_URI" ]; then
-            ECR_REGISTRY="${{ needs.build-and-push.outputs.ecr-registry }}"
-            ECR_REPO="${{ needs.build-and-push.outputs.ecr-repository }}"
-            IMAGE_TAG="${{ env.IMAGE_TAG }}"
-            IMAGE_URI="${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG}"
+          # Construct image URI directly from secrets and env vars
+          ECR_REPO="${{ secrets.ECR_REPOSITORY }}"
+          if [ -z "$ECR_REPO" ]; then
+            ECR_REPO="${{ env.ECR_REPOSITORY_NAME }}"
           fi
           
-          # Validate IMAGE_URI is not empty
-          if [ -z "$IMAGE_URI" ] || [ "$IMAGE_URI" == "::" ]; then
-            echo "ERROR: Image URI is empty or invalid. Build job may have failed."
-            echo "Check the build-and-push job logs for errors."
-            exit 1
-          fi
+          ECR_REGISTRY="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com"
+          IMAGE_TAG="${{ env.IMAGE_TAG }}"
+          IMAGE_URI="${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG}"
           
           echo "Testing image: $IMAGE_URI"
           
@@ -302,12 +297,19 @@ jobs:
 
       - name: Deploy with Helm (atomic operation)
         timeout-minutes: 10
+        env:
+          ECR_REPOSITORY_NAME: practice-project-prod-app
         run: |
           cd kube/helm
           
-          # Parse image URI to get repository and tag
-          IMAGE_URI="${{ needs.build-and-push.outputs.image-uri }}"
-          IMAGE_REPO=$(echo "$IMAGE_URI" | cut -d':' -f1)
+          # Construct image repository and tag from secrets
+          ECR_REPO="${{ secrets.ECR_REPOSITORY }}"
+          if [ -z "$ECR_REPO" ]; then
+            ECR_REPO="${ECR_REPOSITORY_NAME}"
+          fi
+          
+          ECR_REGISTRY="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com"
+          IMAGE_REPO="${ECR_REGISTRY}/${ECR_REPO}"
           IMAGE_TAG="${{ env.IMAGE_TAG }}"
           
           # Verify API_KEY is available
