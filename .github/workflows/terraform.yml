@@ -1,0 +1,197 @@
+name: Terraform CI/CD with OPA
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'iac/**'
+  push:
+    branches:
+      - main
+    paths:
+      - 'iac/**'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        type: choice
+        options:
+          - dev
+          - prod
+
+env:
+  TF_VERSION: '1.6.0'
+  OPA_VERSION: '0.59.0'
+  AWS_REGION: 'ap-southeast-1'
+
+jobs:
+  terraform-plan:
+    name: Terraform Plan & OPA Validation
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        environment: [dev, prod]
+    
+    permissions:
+      contents: read
+      pull-requests: write
+      id-token: write
+
+    defaults:
+      run:
+        working-directory: iac
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: terraform-${{ matrix.environment }}-${{ github.run_id }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Setup OPA
+        run: |
+          wget https://openpolicyagent.org/downloads/v${{ env.OPA_VERSION }}/opa_linux_amd64_static -O opa
+          chmod +x opa
+          sudo mv opa /usr/local/bin/
+          opa version
+
+      - name: Terraform Format Check
+        id: fmt
+        run: terraform fmt -check -recursive
+        continue-on-error: true
+
+      - name: Terraform Init
+        id: init
+        run: |
+          terraform init \
+            -backend-config=backend-${{ matrix.environment }}.hcl \
+            -upgrade
+
+      - name: Terraform Validate
+        id: validate
+        run: terraform validate -no-color
+
+      - name: Terraform Plan
+        id: plan
+        run: |
+          terraform plan \
+            -var-file=${{ matrix.environment }}.tfvars \
+            -out=tfplan.binary \
+            -no-color
+        continue-on-error: true
+
+      - name: Generate JSON Plan
+        id: show
+        if: steps.plan.outcome == 'success'
+        run: terraform show -json tfplan.binary > tfplan.json
+
+      - name: Run OPA Policy Validation
+        id: opa
+        if: steps.plan.outcome == 'success'
+        run: |
+          chmod +x scripts/validate-with-opa.sh
+          scripts/validate-with-opa.sh tfplan.json
+        continue-on-error: true
+
+      - name: Upload Plan Artifact
+        if: steps.plan.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-${{ matrix.environment }}
+          path: iac/tfplan.binary
+          retention-days: 5
+
+      - name: Upload JSON Plan for Review
+        if: steps.plan.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-json-${{ matrix.environment }}
+          path: iac/tfplan.json
+          retention-days: 5
+
+      - name: Fail on Errors
+        if: steps.fmt.outcome == 'failure' || steps.validate.outcome == 'failure' || steps.plan.outcome == 'failure' || steps.opa.outcome == 'failure'
+        run: |
+          echo "❌ One or more steps failed:"
+          echo "Format: ${{ steps.fmt.outcome }}"
+          echo "Validate: ${{ steps.validate.outcome }}"
+          echo "Plan: ${{ steps.plan.outcome }}"
+          echo "OPA: ${{ steps.opa.outcome }}"
+          exit 1
+
+  terraform-apply:
+    name: Terraform Apply
+    runs-on: ubuntu-latest
+    needs: terraform-plan
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    strategy:
+      matrix:
+        environment: [dev]
+      max-parallel: 1
+    
+    permissions:
+      contents: read
+      id-token: write
+
+    defaults:
+      run:
+        working-directory: iac
+
+    environment:
+      name: ${{ matrix.environment }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: terraform-apply-${{ matrix.environment }}-${{ github.run_id }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: Terraform Init
+        run: |
+          terraform init \
+            -backend-config=backend-${{ matrix.environment }}.hcl \
+            -upgrade
+
+      - name: Download Plan Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan-${{ matrix.environment }}
+          path: iac
+
+      - name: Terraform Apply
+        id: apply
+        run: terraform apply -auto-approve tfplan.binary
+
+      - name: Notify Success
+        if: success()
+        run: |
+          echo "✅ Terraform apply completed successfully for ${{ matrix.environment }}"
+
+      - name: Notify Failure
+        if: failure()
+        run: |
+          echo "❌ Terraform apply failed for ${{ matrix.environment }}"
+          exit 1

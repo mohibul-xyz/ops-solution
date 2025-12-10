@@ -1,0 +1,379 @@
+# Simplistic VPC Module (Single NAT Gateway)
+
+A minimal, cost-effective VPC module that creates essential networking components with a single NAT Gateway for all private subnets.
+
+## Naming Convention
+
+All resources follow the format: `{project}-{environment}-resource-name`
+
+**Examples:**
+- VPC: `ticketbangla-dev-vpc`
+- NAT Gateway: `ticketbangla-prod-nat-gateway`
+- Subnet: `ticketbangla-staging-public-subnet-ap-southeast-1a`
+
+## Features
+
+- ✅ **Ultra-Simple Design**: Minimal configuration required
+- ✅ **Consistent Naming**: Project-Environment-Resource format
+- ✅ **Cost-Effective**: Single NAT Gateway shared across all AZs (~$32/month)
+- ✅ **Multi-AZ Support**: Subnets across multiple availability zones
+- ✅ **Public and Private Subnets**: Separate public-facing and internal resources
+- ✅ **Optional NAT**: Can disable NAT for public-only infrastructure
+
+## What's Included
+
+### Core Components
+- VPC with DNS support
+- Internet Gateway
+- Public Subnets (auto-assign public IP)
+- Private Subnets
+- **Single NAT Gateway** (in first public subnet)
+- Route Tables (1 public, 1 private)
+- Elastic IP for NAT Gateway
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────┐
+│                    VPC (10.0.0.0/16)                │
+│                                                     │
+│  ┌──────────────┐  ┌──────────────┐  ┌───────────┐│
+│  │    AZ-1a     │  │    AZ-1b     │  │   AZ-1c   ││
+│  │              │  │              │  │           ││
+│  │ ┌──────────┐ │  │ ┌──────────┐ │  │┌─────────┐││
+│  │ │  Public  │ │  │ │  Public  │ │  ││ Public  │││
+│  │ │10.0.1/24 │ │  │ │10.0.2/24 │ │  ││10.0.3/24│││
+│  │ └────┬─────┘ │  │ └──────────┘ │  │└─────────┘││
+│  │      │       │  │              │  │           ││
+│  │  ┌───┴────┐  │  │              │  │           ││
+│  │  │  NAT   │──┼──┼──────────────┼──┼───────┐   ││
+│  │  └───┬────┘  │  │              │  │       │   ││
+│  │      │       │  │              │  │       │   ││
+│  │ ┌────┴─────┐ │  │ ┌──────────┐ │  │┌──────┴──┐││
+│  │ │ Private  │ │  │ │ Private  │ │  ││ Private │││
+│  │ │10.0.11/24│ │  │ │10.0.12/24│ │  ││10.0.13/24││
+│  │ └──────────┘ │  │ └──────────┘ │  │└─────────┘││
+│  └──────────────┘  └──────────────┘  └───────────┘│
+│         │                                          │
+│    ┌────┴────┐                                     │
+│    │   IGW   │                                     │
+│    └────┬────┘                                     │
+└─────────┼──────────────────────────────────────────┘
+          │
+      Internet
+```
+
+**Key Points:**
+- All private subnets share one NAT Gateway
+- NAT Gateway located in first public subnet (AZ-1a)
+- Cost: ~$32/month for NAT Gateway
+- Single point of failure (acceptable for dev/test/small prod)
+
+## Usage
+
+### Basic Example
+
+```hcl
+module "vpc" {
+  source = "./modules/vpc"
+
+  project            = "ticketbangla"
+  environment        = "dev"
+  vpc_cidr           = "10.0.0.0/16"
+  
+  availability_zones = ["ap-southeast-1a", "ap-southeast-1b", "ap-southeast-1c"]
+  public_subnets     = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
+  private_subnets    = ["10.0.11.0/24", "10.0.12.0/24", "10.0.13.0/24"]
+  
+  enable_nat_gateway = true
+  
+  tags = {
+    Team = "Platform"
+  }
+}
+```
+
+**Creates resources named:**
+- `ticketbangla-dev-vpc`
+- `ticketbangla-dev-igw`
+- `ticketbangla-dev-public-subnet-ap-southeast-1a`
+- `ticketbangla-dev-private-subnet-ap-southeast-1a`
+- `ticketbangla-dev-nat-gateway`
+- `ticketbangla-dev-public-rt`
+- `ticketbangla-dev-private-rt`
+
+### Without NAT Gateway (Public Only)
+
+```hcl
+module "vpc_public_only" {
+  source = "./modules/vpc"
+
+  project            = "ticketbangla"
+  environment        = "demo"
+  vpc_cidr           = "10.0.0.0/16"
+  
+  availability_zones = ["ap-southeast-1a", "ap-southeast-1b"]
+  public_subnets     = ["10.0.1.0/24", "10.0.2.0/24"]
+  private_subnets    = ["10.0.11.0/24", "10.0.12.0/24"]
+  
+  enable_nat_gateway = false  # No NAT = No cost
+  
+  tags = {
+    UseCase = "Public-only resources"
+  }
+}
+```
+
+### Production Setup
+
+```hcl
+module "vpc_prod" {
+  source = "./modules/vpc"
+
+  project            = "ticketbangla"
+  environment        = "prod"
+  vpc_cidr           = "10.0.0.0/16"
+  
+  # 3 AZs for high availability
+  availability_zones = ["ap-southeast-1a", "ap-southeast-1b", "ap-southeast-1c"]
+  public_subnets     = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
+  private_subnets    = ["10.0.11.0/24", "10.0.12.0/24", "10.0.13.0/24"]
+  
+  enable_nat_gateway = true
+  
+  tags = {
+    CostCenter = "Engineering"
+    Compliance = "Required"
+  }
+}
+```
+
+## Requirements
+
+| Name | Version |
+|------|---------|
+| terraform | >= 1.0 |
+| aws | >= 5.0 |
+
+## Inputs
+
+| Name | Description | Type | Default | Required |
+|------|-------------|------|---------|:--------:|
+| project | Project name (used in resource naming) | `string` | n/a | yes |
+| environment | Environment name (dev, test, staging, prod) | `string` | n/a | yes |
+| vpc_cidr | CIDR block for VPC | `string` | n/a | yes |
+| public_subnets | List of public subnet CIDR blocks | `list(string)` | n/a | yes |
+| private_subnets | List of private subnet CIDR blocks | `list(string)` | n/a | yes |
+| availability_zones | List of availability zones | `list(string)` | n/a | yes |
+| enable_nat_gateway | Enable NAT Gateway for private subnet internet access | `bool` | `true` | no |
+| tags | Additional tags for all resources | `map(string)` | `{}` | no |
+
+## Outputs
+
+| Name | Description |
+|------|-------------|
+| vpc_id | ID of the VPC |
+| vpc_cidr | CIDR block of the VPC |
+| public_subnet_ids | List of public subnet IDs |
+| private_subnet_ids | List of private subnet IDs |
+| internet_gateway_id | ID of the Internet Gateway |
+| nat_gateway_id | ID of the NAT Gateway |
+| nat_gateway_public_ip | Public Elastic IP of the NAT Gateway |
+| public_route_table_id | ID of the public route table |
+| private_route_table_id | ID of the private route table |
+
+## Cost Breakdown
+
+### With NAT Gateway (Default)
+- **NAT Gateway**: ~$0.045/hour = ~$32.40/month
+- **Elastic IP**: $0 (free when attached to running NAT)
+- **Data Processing**: ~$0.045/GB
+- **Total**: ~$32-50/month depending on data transfer
+
+### Without NAT Gateway
+- **Total**: $0 (only pay for EC2 instances, etc.)
+
+### Comparison with Multi-NAT Setup
+| Configuration | Cost | Availability |
+|--------------|------|--------------|
+| This Module (Single NAT) | ~$32/month | Single point of failure |
+| Multi-NAT (3 AZs) | ~$97/month | Highly available |
+| No NAT | $0 | Public subnets only |
+
+## Trade-offs
+
+### Single NAT Gateway
+
+**Pros:**
+- ✅ Lower cost (~$32/month vs ~$97/month for 3 NATs)
+- ✅ Simpler configuration
+- ✅ Easier to manage
+- ✅ Sufficient for dev/test/small production
+
+**Cons:**
+- ❌ Single point of failure
+- ❌ All AZs route through one NAT
+- ❌ If NAT fails, all private subnets lose internet
+- ❌ Potential bottleneck for high traffic
+
+**Best For:**
+- Development environments
+- Test environments
+- Small production workloads
+- Cost-sensitive projects
+- Non-critical applications
+
+## Integration with Other Modules
+
+### With EKS Module
+
+```hcl
+module "vpc" {
+  source = "./modules/vpc"
+
+  project            = "ticketbangla"
+  environment        = "prod"
+  vpc_cidr           = "10.0.0.0/16"
+  
+  availability_zones = ["ap-southeast-1a", "ap-southeast-1b", "ap-southeast-1c"]
+  public_subnets     = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
+  private_subnets    = ["10.0.11.0/24", "10.0.12.0/24", "10.0.13.0/24"]
+  
+  enable_nat_gateway = true
+}
+
+module "eks" {
+  source = "./modules/eks"
+
+  cluster_name = "${module.vpc.project}-${module.vpc.environment}-eks-cluster"
+  environment  = "prod"
+  
+  # Use private subnets from VPC
+  subnet_ids = module.vpc.private_subnet_ids
+  
+  depends_on = [module.vpc]
+}
+```
+
+**Creates resources named:**
+- VPC: `ticketbangla-prod-vpc`
+- EKS Cluster: `ticketbangla-prod-eks-cluster`
+- Subnets: `ticketbangla-prod-private-subnet-*`
+```
+
+## CIDR Planning Examples
+
+### Small (254 IPs per subnet)
+```hcl
+vpc_cidr        = "10.0.0.0/16"
+public_subnets  = ["10.0.1.0/24", "10.0.2.0/24"]
+private_subnets = ["10.0.11.0/24", "10.0.12.0/24"]
+```
+
+### Medium (1022 IPs per subnet)
+```hcl
+vpc_cidr        = "10.0.0.0/16"
+public_subnets  = ["10.0.0.0/22", "10.0.4.0/22"]
+private_subnets = ["10.0.16.0/22", "10.0.20.0/22"]
+```
+
+### Large (4094 IPs per subnet)
+```hcl
+vpc_cidr        = "10.0.0.0/16"
+public_subnets  = ["10.0.0.0/20", "10.0.16.0/20"]
+private_subnets = ["10.0.32.0/20", "10.0.48.0/20"]
+```
+
+## Common Scenarios
+
+### 1. Web App with RDS
+```hcl
+# Web servers in public subnets
+# RDS in private subnets (needs NAT for patches)
+enable_nat_gateway = true
+```
+
+### 2. Fully Internal App
+```hcl
+# All resources in private subnets
+# No public internet needed
+enable_nat_gateway = false
+```
+
+### 3. Static Website
+```hcl
+# S3 + CloudFront (no VPC needed)
+# Or just public subnets
+enable_nat_gateway = false
+```
+
+## Troubleshooting
+
+### Private Instances Can't Access Internet
+
+**Check:**
+1. `enable_nat_gateway = true`
+2. NAT Gateway is in "available" state
+3. Security groups allow outbound traffic
+4. Route table has route to NAT
+
+```bash
+# Check NAT Gateway status
+aws ec2 describe-nat-gateways --nat-gateway-ids <nat-id>
+
+# Check route table
+aws ec2 describe-route-tables --route-table-ids <rt-id>
+```
+
+### High Costs
+
+**Solutions:**
+1. Already using single NAT (lowest cost option)
+2. Add VPC Endpoints for S3/DynamoDB (not included in this module)
+3. Review data transfer patterns
+4. Consider disabling NAT if not needed
+
+### NAT Gateway Failure
+
+**Impact:**
+- All private subnets lose internet access
+- Affects all AZs simultaneously
+
+**Mitigation:**
+- Monitor NAT Gateway health
+- Set up CloudWatch alarms
+- Have manual procedures for recovery
+- Consider multi-NAT for critical production
+
+## Limitations
+
+This ultra-simple module does not include:
+- Multiple NAT Gateways (single NAT only)
+- VPC Flow Logs
+- VPC Endpoints
+- VPN Gateway
+- Network ACLs (uses default)
+- Transit Gateway
+
+**If you need these features**, extend the module or use a more comprehensive VPC module.
+
+## When to Upgrade
+
+Consider a multi-NAT setup if:
+- ❗ Application is business-critical
+- ❗ Downtime is not acceptable
+- ❗ High traffic volume
+- ❗ Compliance requirements for HA
+
+For these cases, use a different VPC module with multiple NAT Gateways.
+
+## Related Documentation
+
+- [AWS VPC Documentation](https://docs.aws.amazon.com/vpc/)
+- [NAT Gateway Documentation](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-nat-gateway.html)
+- [Main Project README](../../README.md)
+- [EKS Module](../eks/README.md)
+
+---
+
+*Last updated: November 18, 2025*

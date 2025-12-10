@@ -1,0 +1,234 @@
+# ============================================
+# Environment and Secrets
+# ============================================
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# ============================================
+# Node.js / JavaScript
+# ============================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Build outputs
+dist/
+build/
+out/
+.next/
+
+# Testing
+coverage/
+.nyc_output/
+
+# Package manager
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# ============================================
+# Terraform
+# ============================================
+# Local .terraform directories
+**/.terraform/*
+
+# .tfstate files
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+
+# Crash log files
+crash.log
+crash.*.log
+
+# Exclude all .tfvars files (they may contain sensitive data)
+# Remove this if you want to commit dev.tfvars/prod.tfvars
+# *.tfvars
+# *.tfvars.json
+
+# Terraform plan files
+*.tfplan
+*.tfplan.binary
+tfplan.json
+
+# Ignore override files as they are usually used for local dev
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Ignore CLI configuration files
+.terraformrc
+terraform.rc
+
+# Terraform lock files (uncomment if you want to ignore)
+# .terraform.lock.hcl
+
+# ============================================
+# Kubernetes / Helm
+# ============================================
+# Helm dependencies
+**/charts/*.tgz
+.helm/
+
+# Kubernetes temporary files
+*.kubeconfig
+kubeconfig*
+
+# Helm chart archives
+*.tar.gz
+
+# Kustomize generated files
+kustomization.yaml.bak
+
+# ============================================
+# Docker
+# ============================================
+.dockerignore
+
+# ============================================
+# OPA / Policy Testing
+# ============================================
+opa_test_results/
+policy_violations.txt
+
+# ============================================
+# IDE / Editors
+# ============================================
+# Cursor
+.cursor/
+.cursorrules
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# JetBrains IDEs
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+.vim/
+
+# Emacs
+*~
+\#*\#
+.\#*
+
+# ============================================
+# OS Files
+# ============================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+
+# Linux
+.directory
+.Trash-*
+
+# ============================================
+# Logs
+# ============================================
+logs/
+*.log
+*.log.*
+
+# ============================================
+# Temporary Files
+# ============================================
+tmp/
+temp/
+*.tmp
+*.temp
+*.bak
+*.backup
+*.swp
+*.swo
+
+# ============================================
+# CI/CD Artifacts
+# ============================================
+.github/artifacts/
+artifacts/
+
+# ============================================
+# Documentation
+# ============================================
+# Uncomment if you don't want to track generated docs
+# docs/generated/
+
+# ============================================
+# AWS / Cloud
+# ============================================
+# AWS credentials (should never be committed)
+.aws/
+aws-credentials.json
+credentials.json
+
+# ============================================
+# Development / Testing
+# ============================================
+# Local development scripts
+local.sh
+test-local.sh
+debug.sh
+
+# Downloaded dependencies
+vendor/
+downloads/
+
+# Certificate authority
+ca/
+
+# ============================================
+# Project Specific
+# ============================================
+# Deliverables directory (if contains sensitive info)
+# deliverables/
+
+# Local Kubernetes configs
+local-kubeconfig.yaml
+
+# Local testing files
+test-*.yaml
+local-*.yaml
+
+# Scratch / notes
+scratch/
+notes/
+TODO.local.md
+
+# ============================================
+# Security Scanning Results
+# ============================================
+trivy-results.json
+snyk-report.json
+security-scan-*.txt
