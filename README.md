@@ -175,12 +175,8 @@ The architecture consists of the following AWS services:
 
 ```
 Internet → Route53 → Gateway API (HTTP Route) → Service (ClusterIP) → Pods
-                                                                         ↓
-                                                              Private Subnets (EKS)
-                                                                         ↓
-                                                                   NAT Gateway
-                                                                         ↓
-                                                                 Internet Gateway
+                                                                         
+                                                          
 ```
 
 ### Gateway API Architecture
@@ -634,29 +630,3 @@ Automated cost controls through policy enforcement:
 
 ### Infrastructure Optimization
 - **NAT Gateway**: Single NAT Gateway in dev, multiple in prod
-
-## Troubleshooting
-
-### Common Issues
-
-**Terraform State Lock**
-- Ensure S3 bucket exists and has proper permissions
-- Check if state locking is causing issues
-- Use `terraform force-unlock` if needed
-
-**EKS Node Group Not Ready**
-- Check IAM roles and policies
-- Verify subnet configurations
-- Review security group rules
-
-**OPA Policy Violations**
-- Review policy error messages
-- Check resource tags
-- Verify instance types match allowed lists
-
-**CI/CD Pipeline Failures**
-- Check AWS credentials and OIDC configuration
-- Verify GitHub secrets are properly set
-- Review workflow logs for specific errors
-
----

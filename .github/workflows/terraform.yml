@@ -6,7 +6,6 @@ on:
       - main
     paths:
       - 'iac/**'
-      - '.github/workflows/**'
   push:
     branches:
       - main
