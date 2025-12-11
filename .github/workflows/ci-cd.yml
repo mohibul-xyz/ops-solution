@@ -317,7 +317,7 @@ jobs:
             --timeout 8m \
             --set image.repository=$IMAGE_REPO \
             --set image.tag=$IMAGE_TAG \
-            --set-string secret.apiKey.value="$API_KEY"
+            --set-string secret.apiKey.value="$API_KEY" \
             --cleanup-on-fail \
             --atomic
 

@@ -36,10 +36,12 @@ This repository contains all required deliverables for a complete DevOps solutio
   - Backend configuration for S3 state management with native locking
   - OPA policies for infrastructure validation and compliance
 - **Terraform Plan Output**: 
-  - Static plan output: [`deliverables/tfplan.json`](./deliverables/tfplan.json)
+  - Static plan outputs stored in `deliverables/` directory for reference (both binary and JSON formats)
   - Live CI/CD artifacts available in GitHub Actions workflow runs:
     - [Workflow Run #20111293368](https://github.com/mohibul-xyz/ops-solution/actions/runs/20111293368) - Production deployment with OPA validation
+    - [Workflow Run #20114619948](https://github.com/mohibul-xyz/ops-solution/actions/runs/20114619948) - Application deployment to production
     - Artifacts include: `tfplan-prod` (binary) and `tfplan-json-prod` (JSON format)
+  - Note: The deliverables directory contains example Terraform plan outputs in both binary and JSON formats for easy reference and review
 - **Documentation**: 
   - [`iac/README.md`](./iac/README.md) - Complete infrastructure documentation
   - [`docs/01.IAC.md`](./docs/01.IAC.md) - Detailed IaC guide
@@ -63,18 +65,18 @@ This repository contains all required deliverables for a complete DevOps solutio
 ### 3. CI/CD Pipeline Configuration
 - **Location**: `.github/workflows/` directory
 - **Pipelines**:
-  - **`terraform.yml`**: Infrastructure deployment pipeline
+  - **`terraform.yml`**: Infrastructure deployment pipeline ([Workflow Run #20147146955](https://github.com/mohibul-xyz/ops-solution/actions/runs/20114619948))
     - Terraform plan and validation
     - OPA policy checks for production
     - Automated apply on main branch
     - AWS OIDC authentication
     - Parameter Store integration for secure tfvars
-  - **`docker-build.yml`**: Application build and deploy pipeline
+  - **`ci-cd.yml`**: Application build and deploy pipeline ([Workflow Run #20147146955](https://github.com/mohibul-xyz/ops-solution/actions/runs/20147146955))
     - Docker multi-stage builds with caching
     - Image scanning and security checks
     - ECR push with semantic versioning
-    - Helm deployment to EKS
-    - Automated rollback on failure
+    - Helm deployment to EKS with atomic updates
+    - Zero-downtime deployments with automated rollback on failure
 - **Features**:
   - Automated build, test, and deployment
   - Policy-as-Code validation
