@@ -318,6 +318,8 @@ jobs:
             --set image.repository=$IMAGE_REPO \
             --set image.tag=$IMAGE_TAG \
             --set-string secret.apiKey.value="$API_KEY"
+            --cleanup-on-fail \
+            --atomic
 
       - name: Verify deployment
         timeout-minutes: 5
