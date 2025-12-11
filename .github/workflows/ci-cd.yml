@@ -325,8 +325,6 @@ jobs:
           helm upgrade --install nodejs-simple-app . \
             --namespace prod \
             --create-namespace \
-            --atomic \
-            --cleanup-on-fail \
             --wait \
             --timeout 8m \
             --set image.repository=$IMAGE_REPO \
