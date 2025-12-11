@@ -59,7 +59,6 @@ This repository contains all required deliverables for a complete DevOps solutio
   - AWS Secrets Manager integration as k8s secret
   - Rolling update strategy with zero-downtime
 - **Documentation**: 
-  - [`k8s/helm/simple-api/README.md`](./k8s/helm/simple-api/README.md) - Helm chart documentation
   - [`docs/02.Application.md`](./docs/02.Application.md) - Application deployment guide
 
 ### 3. CI/CD Pipeline Configuration

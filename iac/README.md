@@ -2,7 +2,7 @@
 
 This directory contains Terraform configurations for managing AWS infrastructure across multiple environments (dev and prod).
 
-## 🏗️ Architecture
+## Architecture
 
 The infrastructure consists of:
 
@@ -23,7 +23,7 @@ Internet → API Gateway → VPC Link → ALB (Private) → EKS Cluster
                                             Internet Gateway
 ```
 
-## 📁 Directory Structure
+## Directory Structure
 
 ```
 iac/
@@ -58,7 +58,7 @@ iac/
     └── validate-with-opa.sh  # OPA validation script
 ```
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -168,7 +168,7 @@ iac/
 
 3. Follow steps 3-6 from dev environment (use `prod.tfvars`)
 
-## 🔄 CI/CD Pipeline
+## CI/CD Pipeline
 
 The infrastructure uses GitHub Actions for automated deployment with OPA policy validation.
 
@@ -198,7 +198,7 @@ All infrastructure changes are validated against OPA policies:
 
 Violations will cause the pipeline to fail.
 
-## 📝 Configuration
+## Configuration
 
 ### Environment Variables
 
@@ -219,7 +219,7 @@ Key variables to customize per environment:
 2. Modify values according to your requirements
 3. Ensure compliance with OPA policies
 
-## 🔒 Security Considerations
+## Security Considerations
 
 - **EKS**: Private endpoint access enabled, public access restricted in prod
 - **ALB**: Internal load balancer in private subnets
@@ -228,7 +228,7 @@ Key variables to customize per environment:
 - **IMDSv2**: Required for all EC2 instances
 - **Security Groups**: Restricted ingress rules
 
-## 📊 Outputs
+## Outputs
 
 After successful deployment, the following outputs are available:
 
@@ -242,7 +242,7 @@ Key outputs:
 - `alb_dns_name`: Internal ALB DNS name
 - `vpc_id`: VPC identifier
 
-## 🧪 Testing
+## Testing
 
 ### Format Check
 ```bash
@@ -266,7 +266,7 @@ opa eval --data policies/terraform.rego \
          "data.terraform.deny"
 ```
 
-## 🛠️ Troubleshooting
+## Troubleshooting
 
 ### Backend Initialization Issues
 ```bash
@@ -295,24 +295,4 @@ terraform refresh -var-file=<env>.tfvars
 TF_LOG=DEBUG terraform plan -var-file=<env>.tfvars
 ```
 
-## 📚 Resources
-
-- [Terraform AWS Provider](https://registry.terraform.io/providers/hashicorp/aws/latest/docs)
-- [EKS Best Practices](https://aws.github.io/aws-eks-best-practices/)
-- [OPA Documentation](https://www.openpolicyagent.org/docs/latest/)
-- [API Gateway VPC Link](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-vpc-links.html)
-
-## 🤝 Contributing
-
-1. Create a feature branch
-2. Make changes to IaC
-3. Run format and validation
-4. Test with OPA policies
-5. Create pull request
-6. Review terraform plan output
-7. Merge after approval
-
-## 📄 License
-
-This infrastructure code is part of the ops-solution project.
 
