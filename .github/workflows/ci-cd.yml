@@ -14,17 +14,6 @@
 #     "API_KEY": "your-actual-api-key-value"
 #   }
 #
-# IAM Role Permissions Required:
-#   - secretsmanager:GetSecretValue
-#   - eks:DescribeCluster
-#   - eks:ListClusters
-#   - ecr:GetAuthorizationToken
-#   - ecr:BatchCheckLayerAvailability
-#   - ecr:PutImage
-#   - ecr:InitiateLayerUpload
-#   - ecr:UploadLayerPart
-#   - ecr:CompleteLayerUpload
-#
 name: CI/CD Pipeline
 
 on:
